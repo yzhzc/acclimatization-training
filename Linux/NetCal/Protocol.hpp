@@ -2,11 +2,14 @@
 
 #include <iostream>
 #include <string>
+#include <jsoncpp/json/json.h>
 #include "Sock_yzhzc.hpp"
 
-#define MYSELF
+//#define MYSELF 0
 #define SPACE " "
 #define SPACE_LEN strlen(SPACE)
+#define SEP "/r/n"
+#define SEP_LEN strlen(SEP)
 
 class Request
 {
@@ -45,8 +48,13 @@ public:
 
         return str;
 #else
-        std::cout << "TODO" << std::endl;
-        return nullptr;
+        Json::Value root;
+        root["x"] = x_;
+        root["y"] = y_;
+        root["op"] = op_;
+        Json::FastWriter writer;
+        
+        return writer.write(root);
 #endif
     }
 
@@ -67,11 +75,17 @@ public:
         if (left + SPACE_LEN > str.size())
             return false;
         op_ = str[left + SPACE_LEN];
+        
         return true;
 #else
-        std::cout << "TODO" << std::endl;
+        Json::Value root;
+        Json::Reader reader;
+        reader.parse(str, root);
+        x_ = root["x"].asInt();
+        y_ = root["y"].asInt();
+        op_ = root["op"].asInt();
 
-        return false;
+        return true;
 #endif
     }
 
@@ -85,17 +99,14 @@ class Response
 {
 public:
     Response()
-    {
-    }
+    {}
 
     Response(int result, int code)
         : result_(result), code_(code)
-    {
-    }
+    {}
 
     ~Response()
-    {
-    }
+    {}
 
     // "_code result_"
     // 序列化
@@ -109,8 +120,12 @@ public:
 
         return s;
 #else
-        std::cout << "TODO" << std::endl;
-        return nullptr;
+        Json::Value root;
+        root["code"] = code_;
+        root["result"] = result_;
+        Json::FastWriter writer;
+        
+        return writer.write(root);
 #endif
     }
 
@@ -119,16 +134,21 @@ public:
     {
 #ifdef MYSELF
         std::size_t pos = str.find(SPACE);
-        if(pos == std::string::npos)
+        if (pos == std::string::npos)
             return false;
 
         code_ = atoi(str.substr(0, pos).c_str());
         result_ = atoi(str.substr(pos + SPACE_LEN).c_str());
         return true;
 #else
-        std::cout << "TODO" << std::endl;
+        Json::Value root;
+        Json::Reader reader;
+        reader.parse(str, root);
 
-        return false;
+        result_ = root["result"].asInt();
+        code_ = root["code"].asInt();
+
+        return true;
 #endif
     }
 
@@ -137,25 +157,71 @@ public:
     int code_;   // 计算结果的状态码
 };
 
-std::string Recv(int sockfd)
+bool Recv(int sockfd, std::string &out)
 {
-    char inbuffer[1024];
-    ssize_t s = recv(sockfd, inbuffer, sizeof(inbuffer), 0);
+    char buffer[1024];
+    ssize_t s = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
     if (s > 0)
-        return inbuffer;
-    else if(s == 0)
+    {
+        buffer[s] = 0;
+        out += buffer;
+        return true;
+    }
+    else if (s == 0)
+    {
         std::cout << sockfd << "号客户端退出" << std::endl;
+    }
     else
-        std::cout <<"recv读取失败" << std::endl;
+    {
+        std::cout << "recv读取失败" << std::endl;
+    }
 
     close(sockfd);
-    return "";
+    return false;
 }
 
 void Send(int sockfd, const std::string str)
 {
     int n = send(sockfd, str.c_str(), str.size(), 0);
-    if(n < 0)
+    if (n < 0)
         std::cout << sockfd << "send写入失败" << std::endl;
+}
 
+// 判断接收的报文是否完整
+std::string Decode(std::string &buffer)
+{
+    // 1. 找到报头分割位置
+    std::size_t pos = buffer.find(SEP);
+    if (pos == std::string::npos)
+        return "";
+
+    //2. 获取内容长度
+    int size = atoi(buffer.substr(0, pos).c_str());
+    
+    //3. 计算实际内容长度
+    int content_size = buffer.size() - pos - 2 * SEP_LEN;//std::cout << "content_size: " << content_size << std::endl;
+    if (content_size == size)
+    {
+        buffer.erase(0, pos + SEP_LEN);
+        std::string s = buffer.substr(0, size);
+        buffer.erase(0, size + SEP_LEN);
+        
+
+        return s;
+    }
+
+    return "";
+}
+
+//添加报头报尾length\r\ncode\r\n
+std::string Encode(std::string &s)
+{
+    std::string new_package = std::to_string(s.size());
+    new_package += SEP;
+    new_package += s;
+    new_package += SEP;
+                            std::cout << "Encode:" << new_package << std::endl;
+
+
+    return new_package;
 }

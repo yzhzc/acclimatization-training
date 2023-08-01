@@ -2,9 +2,9 @@
 all : client server
 
 client : CalClient.cc
-	g++ $^ -o $@ -std=c++17
+	g++ $^ -o $@ -std=c++17 -ljsoncpp
 server : CalServer.cc
-	g++ $^ -o $@ -std=c++17 -lpthread
+	g++ $^ -o $@ -std=c++17 -lpthread -ljsoncpp
 
 .PHONY : clean
 clean :

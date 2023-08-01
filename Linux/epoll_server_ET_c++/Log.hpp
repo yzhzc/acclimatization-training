@@ -7,21 +7,19 @@
 #include <string>
 #include <cstring>
 
-
 // 日志是有日志级别的
-#define DEBUG   0
-#define NORMAL  1
+#define DEBUG 0
+#define NORMAL 1
 #define WARNING 2
-#define ERROR   3
-#define FATAL   4
+#define ERROR 3
+#define FATAL 4
 
 const char *gLevelMap[] = {
-    "DEBUG",
-    "NORMAL",
-    "WARNING",
-    "ERROR",
-    "FATAL"
-};
+    "DEBUG",   // 调试
+    "NORMAL",  // 正常
+    "WARNING", // 警告
+    "ERROR",   // 错误
+    "FATAL"};  // 致命
 
 #define LOGFILE "./selectServer.log"
 
@@ -33,12 +31,13 @@ void logMessage(int level, const char *format, ...)
     // while()
     // int x = va_arg(ap, int);
     // va_end(ap); //ap=nullptr
-    char stdBuffer[1024]; //标准部分
+    char stdBuffer[1024]; // 标准部分
     time_t timestamp = time(nullptr);
     // struct tm *localtime = localtime(&timestamp);
-    snprintf(stdBuffer, sizeof stdBuffer, "[%s] [%ld] ", gLevelMap[level], timestamp);
+    snprintf(stdBuffer, sizeof stdBuffer, "[%s] [%ld] ",
+             gLevelMap[level], timestamp);
 
-    char logBuffer[1024]; //自定义部分
+    char logBuffer[1024]; // 自定义部分
     va_list args;
     va_start(args, format);
     // vprintf(format, args);

@@ -1,4 +1,4 @@
-//·´Ó¦¶Ñ¼òµ¥°æ
+// ï¿½ï¿½Ó¦ï¿½Ñ¼òµ¥°ï¿½
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -11,182 +11,180 @@
 #include <sys/epoll.h>
 #include "wrap.h"
 
-#define _BUF_LEN_  1024
+#define _BUF_LEN_ 1024
 #define _EVENT_SIZE_ 1024
 
-//È«¾ÖepollÊ÷µÄ¸ù
+// È«ï¿½ï¿½epollï¿½ï¿½ï¿½Ä¸ï¿½
 int gepfd = 0;
 
-//ÊÂ¼þÇý¶¯½á¹¹Ìå
-typedef struct xx_event{
+// ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½
+typedef struct xx_event
+{
     int fd;
     int events;
-    void (*call_back)(int fd,int events,void *arg);
+    void (*call_back)(int fd, int events, void *arg);
     void *arg;
     char buf[1024];
     int buflen;
     int epfd;
-}xevent;
+} xevent;
 
-xevent myevents[_EVENT_SIZE_+1];
+xevent myevents[_EVENT_SIZE_ + 1];
 
-void readData(int fd,int events,void *arg);
+void readData(int fd, int events, void *arg);
 
-//Ìí¼ÓÊÂ¼þ
-//eventadd(lfd,EPOLLIN,initAccept,&myevents[_EVENT_SIZE_-1],&myevents[_EVENT_SIZE_-1]);
-void eventadd(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
+// ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½
+// eventadd(lfd,EPOLLIN,initAccept,&myevents[_EVENT_SIZE_-1],&myevents[_EVENT_SIZE_-1]);
+void eventadd(int fd, int events, void (*call_back)(int, int, void *), void *arg, xevent *ev)
 {
     ev->fd = fd;
     ev->events = events;
-    //ev->arg = arg;//´ú±í½á¹¹Ìå×Ô¼º,¿ÉÒÔÍ¨¹ýargµÃµ½½á¹¹ÌåµÄËùÓÐÐÅÏ¢
+    // ev->arg = arg;//ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ï¿½Ô¼ï¿½,ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½argï¿½Ãµï¿½ï¿½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     ev->call_back = call_back;
 
     struct epoll_event epv;
     epv.events = events;
-    epv.data.ptr = ev;//ºËÐÄË¼Ïë
-    epoll_ctl(gepfd,EPOLL_CTL_ADD,fd,&epv);//ÉÏÊ÷
+    epv.data.ptr = ev;                         // ï¿½ï¿½ï¿½ï¿½Ë¼ï¿½ï¿½
+    epoll_ctl(gepfd, EPOLL_CTL_ADD, fd, &epv); // ï¿½ï¿½ï¿½ï¿½
 }
 
-//ÐÞ¸ÄÊÂ¼þ
-//eventset(fd,EPOLLOUT,senddata,arg,ev);
-void eventset(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
+// ï¿½Þ¸ï¿½ï¿½Â¼ï¿½
+// eventset(fd,EPOLLOUT,senddata,arg,ev);
+void eventset(int fd, int events, void (*call_back)(int, int, void *), void *arg, xevent *ev)
 {
     ev->fd = fd;
     ev->events = events;
-    //ev->arg = arg;
+    // ev->arg = arg;
     ev->call_back = call_back;
 
     struct epoll_event epv;
     epv.events = events;
     epv.data.ptr = ev;
-    epoll_ctl(gepfd,EPOLL_CTL_MOD,fd,&epv);//ÐÞ¸Ä
+    epoll_ctl(gepfd, EPOLL_CTL_MOD, fd, &epv); // ï¿½Þ¸ï¿½
 }
 
-//É¾³ýÊÂ¼þ
-void eventdel(xevent *ev,int fd,int events)
+// É¾ï¿½ï¿½ï¿½Â¼ï¿½
+void eventdel(xevent *ev, int fd, int events)
 {
-	printf("begin call %s\n",__FUNCTION__);
+    printf("begin call %s\n", __FUNCTION__);
 
     ev->fd = 0;
     ev->events = 0;
     ev->call_back = NULL;
-    memset(ev->buf,0x00,sizeof(ev->buf));
+    memset(ev->buf, 0x00, sizeof(ev->buf));
     ev->buflen = 0;
 
     struct epoll_event epv;
     epv.data.ptr = NULL;
     epv.events = events;
-    epoll_ctl(gepfd,EPOLL_CTL_DEL,fd,&epv);//ÏÂÊ÷
+    epoll_ctl(gepfd, EPOLL_CTL_DEL, fd, &epv); // ï¿½ï¿½ï¿½ï¿½
 }
 
-//·¢ËÍÊý¾Ý
-void senddata(int fd,int events,void *arg)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+void senddata(int fd, int events, void *arg)
 {
-    printf("begin call %s\n",__FUNCTION__);
+    printf("begin call %s\n", __FUNCTION__);
 
     xevent *ev = arg;
-    Write(fd,ev->buf,ev->buflen);
-    eventset(fd,EPOLLIN,readData,arg,ev);
+    Write(fd, ev->buf, ev->buflen);
+    eventset(fd, EPOLLIN, readData, arg, ev);
 }
 
-//¶ÁÊý¾Ý
-void readData(int fd,int events,void *arg)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+void readData(int fd, int events, void *arg)
 {
-    printf("begin call %s\n",__FUNCTION__);
+    printf("begin call %s\n", __FUNCTION__);
     xevent *ev = arg;
 
-    ev->buflen = Read(fd,ev->buf,sizeof(ev->buf));
-    if(ev->buflen>0) //¶Áµ½Êý¾Ý
-	{	
-		//void eventset(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
-        eventset(fd,EPOLLOUT,senddata,arg,ev);
-
+    ev->buflen = Read(fd, ev->buf, sizeof(ev->buf));
+    if (ev->buflen > 0) // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    {
+        // void eventset(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
+        eventset(fd, EPOLLOUT, senddata, arg, ev);
     }
-	else if(ev->buflen==0) //¶Ô·½¹Ø±ÕÁ¬½Ó
-	{
+    else if (ev->buflen == 0) // ï¿½Ô·ï¿½ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
+    {
         Close(fd);
-        eventdel(ev,fd,EPOLLIN);
+        eventdel(ev, fd, EPOLLIN);
     }
-
 }
-//ÐÂÁ¬½Ó´¦Àí
-void initAccept(int fd,int events,void *arg)
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ó´ï¿½ï¿½ï¿½
+void initAccept(int fd, int events, void *arg)
 {
-    printf("begin call %s,gepfd =%d\n",__FUNCTION__,gepfd);//__FUNCTION__ º¯ÊýÃû
+    printf("begin call %s,gepfd =%d\n", __FUNCTION__, gepfd); //__FUNCTION__ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     int i;
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
-    int cfd = Accept(fd,(struct sockaddr*)&addr,&len);//ÊÇ·ñ»á×èÈû£¿
-	
-	//²éÕÒmyeventsÊý×éÖÐ¿ÉÓÃµÄÎ»ÖÃ
-    for(i = 0 ; i < _EVENT_SIZE_; i ++)
-	{
-        if(myevents[i].fd==0)
-		{
+    int cfd = Accept(fd, (struct sockaddr *)&addr, &len); // ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+    // ï¿½ï¿½ï¿½ï¿½myeventsï¿½ï¿½ï¿½ï¿½ï¿½Ð¿ï¿½ï¿½Ãµï¿½Î»ï¿½ï¿½
+    for (i = 0; i < _EVENT_SIZE_; i++)
+    {
+        if (myevents[i].fd == 0)
+        {
             break;
         }
     }
 
-    //ÉèÖÃ¶ÁÊÂ¼þ
-    eventadd(cfd,EPOLLIN,readData,&myevents[i],&myevents[i]);
+    // ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Â¼ï¿½
+    eventadd(cfd, EPOLLIN, readData, &myevents[i], &myevents[i]);
 }
 
-int main(int argc,char *argv[])
+int main(int argc, char *argv[])
 {
-	//´´½¨socket
-    int lfd = Socket(AF_INET,SOCK_STREAM,0);
+    // ï¿½ï¿½ï¿½ï¿½socket
+    int lfd = Socket(AF_INET, SOCK_STREAM, 0);
 
-    //¶Ë¿Ú¸´ÓÃ
+    // ï¿½Ë¿Ú¸ï¿½ï¿½ï¿½
     int opt = 1;
-    setsockopt(lfd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-	//°ó¶¨
+    // ï¿½ï¿½
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(8888);
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    Bind(lfd,(struct sockaddr*)&servaddr,sizeof(servaddr));
-    
-	//¼àÌý
-    Listen(lfd,128);
+    Bind(lfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
-	//´´½¨epollÊ÷¸ù½Úµã
+    // ï¿½ï¿½ï¿½ï¿½
+    Listen(lfd, 128);
+
+    // ï¿½ï¿½ï¿½ï¿½epollï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½
     gepfd = epoll_create(1024);
-    printf("gepfd === %d\n",gepfd);
+    printf("gepfd === %d\n", gepfd);
 
     struct epoll_event events[1024];
 
-    //Ìí¼Ó×î³õÊ¼ÊÂ¼þ£¬½«ÕìÌýµÄÃèÊö·ûÉÏÊ÷
-    eventadd(lfd,EPOLLIN,initAccept,&myevents[_EVENT_SIZE_],&myevents[_EVENT_SIZE_]);
-    //void eventadd(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    eventadd(lfd, EPOLLIN, initAccept, &myevents[_EVENT_SIZE_], &myevents[_EVENT_SIZE_]);
+    // void eventadd(int fd,int events,void (*call_back)(int ,int ,void *),void *arg,xevent *ev)
 
-    while(1)
-	{
-        int nready = epoll_wait(gepfd,events,1024,-1);
-		if(nready<0) //µ÷ÓÃepoll_waitÊ§°Ü
-		{
-			perr_exit("epoll_wait error");
-			
-		}
-        else if(nready>0) //µ÷ÓÃepoll_wait³É¹¦,·µ»ØÓÐÊÂ¼þ·¢ÉúµÄÎÄ¼þÃèÊö·ûµÄ¸öÊý
-		{
+    while (1)
+    {
+        int nready = epoll_wait(gepfd, events, 1024, -1);
+        if (nready < 0) // ï¿½ï¿½ï¿½ï¿½epoll_waitÊ§ï¿½ï¿½
+        {
+            perr_exit("epoll_wait error");
+        }
+        else if (nready > 0) // ï¿½ï¿½ï¿½ï¿½epoll_waitï¿½É¹ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½
+        {
             int i = 0;
-            for(i=0;i<nready; i++)
-			{
-                xevent *xe = events[i].data.ptr;//È¡ptrÖ¸Ïò½á¹¹ÌåµØÖ·
-                printf("fd=%d\n",xe->fd);
+            for (i = 0; i < nready; i++)
+            {
+                xevent *xe = events[i].data.ptr; // È¡ptrÖ¸ï¿½ï¿½á¹¹ï¿½ï¿½ï¿½Ö·
+                printf("fd=%d\n", xe->fd);
 
-                if(xe->events & events[i].events)
-				{
-                    xe->call_back(xe->fd,xe->events,xe);//µ÷ÓÃÊÂ¼þ¶ÔÓ¦µÄ»Øµ÷
+                if (xe->events & events[i].events)
+                {
+                    xe->call_back(xe->fd, xe->events, xe); // ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Ó¦ï¿½Ä»Øµï¿½
                 }
             }
         }
     }
 
-	//¹Ø±Õ¼àÌýÎÄ¼þÃèÊö·û
-	Close(lfd);
+    // ï¿½Ø±Õ¼ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    Close(lfd);
 
     return 0;
 }

@@ -34,17 +34,18 @@ void logMessage(int level, const char *format, ...)
     char stdBuffer[1024]; //标准部分
     time_t timestamp = time(nullptr);
     // struct tm *localtime = localtime(&timestamp);
-    snprintf(stdBuffer, sizeof stdBuffer, "[%s] [%ld] ", gLevelMap[level], timestamp);
+    // 将等级,时间输出到字符串中
+    snprintf(stdBuffer, sizeof(stdBuffer), "[%s] [%ld] ", gLevelMap[level], timestamp);
 
     char logBuffer[1024]; //自定义部分
     va_list args;
     va_start(args, format);
     // vprintf(format, args);
-    vsnprintf(logBuffer, sizeof logBuffer, format, args);
+    vsnprintf(logBuffer, sizeof(logBuffer), format, args);
     va_end(args);
 
-    // FILE *fp = fopen(LOGFILE, "a");
-    printf("%s%s\n", stdBuffer, logBuffer);
-    // fprintf(fp, "%s%s\n", stdBuffer, logBuffer);
-    // fclose(fp);
+    FILE *fp = fopen(LOGFILE, "a");
+    //printf("%s%s\n", stdBuffer, logBuffer);
+    fprintf(fp, "%s%s\n", stdBuffer, logBuffer);
+    fclose(fp);
 }
